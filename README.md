@@ -44,12 +44,6 @@ Optional hydrologic attributes (**basin_id**, **upstream_area**, **distance_to_r
 
 Place the main table at **`data/raw/water_quality.csv`**.
 
-Optional merge of two aligned CSVs:
-
-```text
-py scripts/prepare_sample_dataset.py path/to/folder
-```
-
 ---
 
 ## Pipeline architecture
@@ -88,15 +82,15 @@ Figures written to **`outputs/figures/`**.
 
 ## How to run the project
 
-**1. Environment (Windows — if `pip` is not on PATH):**
+**1. Environment:**
 
 ```powershell
 py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-py -m pip install -r requirements.txt
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 ```
 
-**2. Data:** ensure **`data/raw/water_quality.csv`** exists (or run merge script).
+**2. Data:** ensure **`data/raw/water_quality.csv`** exists.
 
 **3. Full workflow:**
 
@@ -104,16 +98,10 @@ py -m pip install -r requirements.txt
 py scripts/run_full_workflow.py
 ```
 
-Optional merge + workflow:
+**4. Notebooks:**
 
 ```powershell
-py scripts/run_full_workflow.py --merge-dir "path/to/data_folder"
-```
-
-**4. Notebooks (if Jupyter on PATH):**
-
-```powershell
-py -m jupyter lab notebooks/
+.venv\Scripts\python.exe -m jupyter lab notebooks/
 ```
 
 **5. Programmatic:**
@@ -123,28 +111,6 @@ from pathlib import Path
 from src.pipelines.research_pipeline import run_full_pipeline
 run_full_pipeline(Path("config/config.yaml"))
 ```
-
----
-
-## Visualization
-
-**`src/visualization/maps.py`**
-
-| Function | Role |
-|----------|------|
-| `plot_sampling_points` | Sites map |
-| `plot_spatial_clusters` | CV groups |
-| `plot_prediction_map` | Observed vs predicted at samples |
-| `plot_prediction_grid_map` | **Grid** over bbox; `predict_fn(lon, lat)` must fill non-spatial features (e.g. medians) |
-
----
-
-## Learning materials
-
-- **[docs/LEARNING_GUIDE.md](docs/LEARNING_GUIDE.md)** — pedagogy (spatial ML, ensembles, SHAP).  
-- **notebooks/01…05** — step-by-step.  
-- **[docs/DATASETS_REQUIRED.md](docs/DATASETS_REQUIRED.md)** — data checklist.  
-- **[docs/SCIENCE_OVERVIEW.md](docs/SCIENCE_OVERVIEW.md)** — short design note.
 
 ---
 

@@ -1,119 +1,167 @@
-# River water quality — geospatial machine learning
+# River Water Quality Prediction
 
-**Independent research software** for predicting in-river water quality from **coordinates**, optional **sample dates**, and **environmental predictors** (satellite, reanalysis, hydrology). Suitable for **portfolio** and **publication-style** workflows with explicit spatial validation and saved artifacts.
+> Geospatial machine learning pipeline for predicting in-river water quality from environmental covariates with spatial cross-validation.
 
----
+![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
+![License](https://img.shields.io/badge/License-MIT-green)
+![Status](https://img.shields.io/badge/Status-Active-brightgreen)
 
-## Project overview
+## 🎯 What is this?
 
-The repository implements an end-to-end **geospatial ML pipeline**:
+An end-to-end ML pipeline that predicts **three water quality parameters** in rivers:
 
-1. Load tabular data (measurements + lat/lon + predictors).  
-2. **Feature engineering** — temporal (month, season, rolling precipitation), scientific interactions (e.g. ET/precip), optional hydrology columns.  
-3. **Spatial clustering** on coordinates → groups for cross-validation.  
-4. **Spatial GroupKFold** — no train/test leakage across nearby sites.  
-5. **Stacking ensemble** (LightGBM + XGBoost [+ CatBoost]) per target.  
-6. **SHAP** summaries for interpretation.  
-7. **Persisted outputs** — metrics JSON, trained bundles, figures.
+| Target | Description | R² (Spatial CV) |
+|--------|-------------|----------------|
+| Total Alkalinity | Acid-neutralizing capacity | **0.31** |
+| Electrical Conductance | Dissolved ions/salinity | **0.27** |
+| Dissolved Reactive Phosphorus | Nutrient (eutrophication) | 0.00* |
 
-Orchestration: **`scripts/run_full_workflow.py`** or Python API `src.pipelines.research_pipeline.run_full_pipeline`.
-
----
-
-## Scientific motivation
-
-River chemistry is controlled by **catchment processes**: dilution, evaporation, weathering, land cover, and flow routing. Environmental covariates at the sample location (and time) act as **proxies** for those processes. Because nearby samples share similar landscapes, **i.i.d. assumptions fail** — standard random train/test splits **inflate** performance. This project uses **spatially blocked validation** so metrics better reflect **prediction at unseen locations**.
-
-Optional hydrologic attributes (**basin_id**, **upstream_area**, **distance_to_river**) further link predictions to **drainage structure**; see **[docs/HYDROLOGY_FEATURES.md](docs/HYDROLOGY_FEATURES.md)**.
+*Phosphorus is harder to predict — requires field-specific data
 
 ---
 
-## Data requirements
+## 🚀 Quick Start
 
-| Required | Description |
-|----------|-------------|
-| **lat**, **lon** | WGS84 recommended |
-| **Targets** | Columns to predict (names in `config/config.yaml`) |
-| **Predictors** | Numeric features (Landsat indices, ERA5, TerraClimate, soil, flow, etc.) |
+```bash
+# 1. Clone & enter
+git clone https://github.com/licette32/geospatial-water-quality-ml.git
+cd geospatial-water-quality-ml
 
-| Optional | Description |
-|----------|-------------|
-| **sample_date** / **Sample Date** | Triggers **month**, **season**, **rolling precipitation** features |
-| **precipitation** (or `ppt`, `total_precipitation_sum`) | Needed for rolling precip features |
-| **basin_id**, **upstream_area**, **distance_to_river** | Hydrology; see HYDROLOGY_FEATURES.md |
-
-Place the main table at **`data/raw/water_quality.csv`**.
-
----
-
-## Pipeline architecture
-
-```
-load_data
-    → feature_engineering (temporal + scientific_interactions)
-    → spatial_clustering (KMeans lat/lon → spatial_group_id)
-    → spatial_cross_validation + stacking (per target)
-    → SHAP (surrogate tree model on stacked predictions for visualization)
-    → save_results (outputs/metrics_all.json, outputs/artifacts/bundle_*.joblib, outputs/figures/*.png)
-```
-
-Config: **`config/config.yaml`** (`paths.outputs`, `validation.spatial`, `project.targets`).
-
----
-
-## Spatial machine learning
-
-- **Clusters:** KMeans in geographic space → `spatial_group_id`.  
-- **GroupKFold:** each fold holds out **entire groups** — training and test sites are **spatially separated**, reducing **spatial leakage**.  
-- **Why random splits fail:** Train and test both contain neighbors; the model exploits **implicit spatial autocorrelation**; test R² is optimistic for **new regions**.
-
-Teaching: **[docs/LEARNING_GUIDE.md](docs/LEARNING_GUIDE.md)** and **`notebooks/03_spatial_validation.ipynb`**.
-
----
-
-## Model interpretability
-
-- **Stacking** combines diverse gradient boosters; **Ridge** meta-learner blends their outputs.  
-- **SHAP** (on a **surrogate** LightGBM fit to stacked predictions) gives **global bar plots** of driver importance — useful for **hypothesis alignment**, not causal claims.
-
-Figures written to **`outputs/figures/`**.
-
----
-
-## How to run the project
-
-**1. Environment:**
-
-```powershell
-py -m venv .venv
-.venv\Scripts\Activate.ps1
+# 2. Create environment
+python -m venv .venv
+source .venv/Scripts/activate  # Linux: source .venv/bin/activate
 pip install -r requirements.txt
-```
 
-**2. Data:** ensure **`data/raw/water_quality.csv`** exists.
-
-**3. Full workflow:**
-
-```powershell
-py scripts/run_full_workflow.py
-```
-
-**4. Notebooks:**
-
-```powershell
-.venv\Scripts\python.exe -m jupyter lab notebooks/
-```
-
-**5. Programmatic:**
-
-```python
-from pathlib import Path
-from src.pipelines.research_pipeline import run_full_pipeline
-run_full_pipeline(Path("config/config.yaml"))
+# 3. Run pipeline
+python scripts/run_full_workflow.py
 ```
 
 ---
 
-## Citation & license
+## 📊 The Problem
 
-Cite this software and all **data products** you use (Landsat, ERA5, etc.) per their terms. Use for research and education; comply with upstream data licenses.
+River water quality depends on **catchment processes**:
+- Dilution & evaporation
+- Weathering & soil chemistry
+- Land cover & flow routing
+
+Nearby samples share similar landscapes → **random train/test splits inflate performance**. This pipeline uses **spatial cross-validation** for honest metrics.
+
+---
+
+## 🔧 Pipeline Architecture
+
+```
+┌─────────────────┐
+│  1. Load Data  │  (lat/lon + targets + predictors)
+└────────┬────────┘
+         ▼
+┌─────────────────────┐
+│ 2. Feature Eng.  │  (temporal, scientific interactions)
+└────────┬────────────┘
+         ▼
+┌──────────────────────┐
+│ 3. Spatial Clusters │  (KMeans on coordinates)
+└────────┬───────────────┘
+         ▼
+┌───────────────────────────┐
+│ 4. Spatial GroupKFold │  (blocks to prevent leakage)
+└────────┬───────────────┘
+         ▼
+┌─────────────────────┐
+│ 5. Stacking Ens.  │  (LightGBM + XGBoost + CatBoost)
+└────────┬────────────┘
+         ▼
+┌─────────────────┐
+│ 6. SHAP Explainer │  (feature importance)
+└────────┬────────┘
+         ▼
+┌─────────────────────┐
+│ 7. Save Artifacts │  (models, metrics, figures)
+└─────────────────┘
+```
+
+---
+
+## 📁 Project Structure
+
+```
+├── data/
+│   └── raw/water_quality_dataset_v1.csv   # 9,319 samples, 41 features
+├── src/
+│   ├── data/                            # Data loading
+│   ├── features/                     # Feature engineering
+│   ├── models/                      # Training & stacking
+│   ├── pipelines/                   # Orchestration
+│   ├── validation/                 # Spatial CV
+│   └── visualization/              # Maps & plots
+├── notebooks/                      # 10 Jupyter notebooks
+├── config/config.yaml              # Configuration
+��── run_pipeline.py                # Entry point
+```
+
+---
+
+## 🔬 Features Used
+
+| Category | Variables |
+|----------|----------|
+| **Satellite** | NDVI, EVI, NDMI, MNDWI, LST, NIR, Green, SWIR |
+| **Climate** | Precipitation, evaporation, temperature, soil moisture |
+| **Soil** | CEC, clay, pH, phosphorus |
+| **Hydrology** | Flow accumulation |
+| **Interactions** | ET/precip ratio, soil pH, flow × soil |
+
+---
+
+## 📓 Notebooks
+
+| # | Title | Description |
+|---|-------|------------|
+| 01 | Data Exploration | Load & examine data |
+| 02 | Feature Engineering | Create derived features |
+| 03 | Spatial Validation | Spatial autocorrelation & CV |
+| 04 | Model Training | Stacking ensemble |
+| 05 | Explainability | SHAP importance |
+| 06 | Diagnostics | Model metrics |
+| 07 | Prediction Maps | Spatial interpolation |
+| 08 | Stability Analysis | Robustness checks |
+| 09 | Feature Sensitivity | Feature ablation |
+| 10 | Uncertainty | Confidence intervals |
+
+---
+
+## 🛠️ Tech Stack
+
+- **Python 3.10+**
+- **ML:** LightGBM, XGBoost, CatBoost
+- **Spatial:** Scikit-learn, GeoPandas
+- **Visualization:** Matplotlib, SHAP
+- **Data:** Pandas, NumPy
+
+---
+
+## 📝 Citation
+
+If you use this code, cite:
+
+```bibtex
+@software{geospatial-water-quality-ml,
+  author = {Your Name},
+  title = {River Water Quality — Geospatial ML Pipeline},
+  url = {https://github.com/licette32/geospatial-water-quality-ml},
+  year = {2026}
+}
+```
+
+---
+
+## 📄 License
+
+MIT License — free to use and modify.
+
+---
+
+## 🤝 Contributing
+
+Issues and pull requests welcome!

@@ -1,0 +1,33 @@
+# Geospatial ML — river water quality (research)
+
+project:
+  name: river-water-quality-geml
+  random_state: 42
+  targets:
+    - total_alkalinity
+    - electrical_conductance
+    - dissolved_reactive_phosphorus
+
+paths:
+  raw_data: data/raw
+  processed_data: data/processed
+  model_dir: models
+  figures_dir: figures
+  outputs: outputs
+
+data:
+  # Main training CSV in data/raw (water_quality_dataset_v1.csv or water_quality.csv from merge)
+  water_quality_csv: water_quality_dataset_v1.csv
+
+validation:
+  spatial:
+    n_splits: 5
+    n_spatial_clusters: 30
+
+models:
+  lightgbm: {n_estimators: 400, learning_rate: 0.05, max_depth: 8, random_state: 42}
+  xgboost: {n_estimators: 400, learning_rate: 0.05, max_depth: 8, random_state: 42}
+  catboost: {iterations: 400, learning_rate: 0.05, depth: 8, random_seed: 42, verbose: 0}
+
+pipeline:
+  mode: tabular
